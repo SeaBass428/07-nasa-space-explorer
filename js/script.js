@@ -11,6 +11,8 @@ const button = document.querySelector('.filters button');
 const gallery = document.getElementById('gallery');
 
 const apiUrl = 'https://science.nasa.gov/wp-json/wp/v2/apod-basic';
+const imageLimit = 9;
+const maxLookbackDays = 30;
 
 button.addEventListener('click', async () => {
   const startDate = startInput.value;
@@ -21,40 +23,24 @@ button.addEventListener('click', async () => {
     return;
   }
 
-  const parameters = new URLSearchParams({
-    date_from: startDate.slice(2).replaceAll('-', ''),
-    date_to: endDate.slice(2).replaceAll('-', ''),
-    per_page: '100'
-  });
-
   gallery.textContent = 'Loading images...';
 
   try {
-    const images = [];
-    let page = 1;
+    let searchStartDate = startDate;
+    let daysLookedBack = 0;
+    let images = await fetchImages(searchStartDate, endDate);
 
-    while (true) {
-      parameters.set('page', String(page));
-      const response = await fetch(`${apiUrl}?${parameters}`);
-      const pageImages = await response.json();
-
-      if (!response.ok) {
-        const message = pageImages.message || `NASA could not return images (${response.status}).`;
-        throw new Error(message);
-      }
-
-      if (!Array.isArray(pageImages)) {
-        throw new Error('NASA returned an unexpected response. Please try again.');
-      }
-
-      images.push(...pageImages);
-
-      const totalPages = Number(response.headers.get('X-WP-TotalPages'));
-      if (pageImages.length < 100 || (totalPages > 0 && page >= totalPages)) {
-        break;
-      }
-
-      page += 1;
+    // Extend the search when the selected range has fewer than nine images.
+    while (
+      images.length < imageLimit
+      && daysLookedBack < maxLookbackDays
+      && searchStartDate > earliestDate
+    ) {
+      const previousDate = new Date(`${searchStartDate}T00:00:00Z`);
+      previousDate.setUTCDate(previousDate.getUTCDate() - 1);
+      searchStartDate = previousDate.toISOString().split('T')[0];
+      daysLookedBack += 1;
+      images = await fetchImages(searchStartDate, endDate);
     }
 
     if (images.length === 0) {
@@ -62,13 +48,49 @@ button.addEventListener('click', async () => {
       return;
     }
 
-    displayImages(images);
+    displayImages(images.slice(0, imageLimit));
   } catch (error) {
     gallery.textContent = error instanceof Error
       ? error.message
       : 'Unable to load APOD images. Please try again.';
   }
 });
+
+async function fetchImages(startDate, endDate) {
+  const parameters = new URLSearchParams({
+    date_from: startDate.slice(2).replaceAll('-', ''),
+    date_to: endDate.slice(2).replaceAll('-', ''),
+    per_page: '100'
+  });
+  const images = [];
+  let page = 1;
+
+  while (true) {
+    parameters.set('page', String(page));
+    const response = await fetch(`${apiUrl}?${parameters}`);
+    const pageImages = await response.json();
+
+    if (!response.ok) {
+      const message = pageImages.message || `NASA could not return images (${response.status}).`;
+      throw new Error(message);
+    }
+
+    if (!Array.isArray(pageImages)) {
+      throw new Error('NASA returned an unexpected response. Please try again.');
+    }
+
+    images.push(...pageImages);
+
+    const totalPages = Number(response.headers.get('X-WP-TotalPages'));
+    if (pageImages.length < 100 || (totalPages > 0 && page >= totalPages)) {
+      break;
+    }
+
+    page += 1;
+  }
+
+  return images;
+}
 
 function displayImages(images) {
   gallery.replaceChildren();
