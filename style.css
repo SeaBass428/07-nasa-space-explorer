@@ -108,6 +108,12 @@ button:hover {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.gallery-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.15);
 }
 
 /* Three columns on wider screens */
@@ -128,6 +134,89 @@ button:hover {
   margin-top: 10px;
   padding: 5px;
   font-size: 14px;
+}
+
+.gallery-item .gallery-item-title {
+  font-weight: bold;
+  text-align: center;
+}
+
+.gallery-item .details-button {
+  align-self: center;
+  width: auto;
+  margin: 10px 5px 5px;
+  padding: 8px 16px;
+  background-color: #1b4f91;
+  color: white;
+  border: none;
+}
+
+.gallery-item .details-button:hover {
+  background-color: #123967;
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 15, 25, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 1000;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal-content {
+  position: relative;
+  background: #fff;
+  width: min(900px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: 12px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+  padding: 20px;
+}
+
+.modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: #efefef;
+  color: #222;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modal-body img {
+  width: 100%;
+  max-height: 500px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.modal-body h2 {
+  font-size: clamp(1.5rem, 2vw, 2rem);
+  color: #1b1b1b;
+}
+
+.modal-body p {
+  line-height: 1.6;
+  color: #333;
 }
 
 /* Placeholder content */

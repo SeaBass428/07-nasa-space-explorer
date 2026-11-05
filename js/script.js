@@ -9,10 +9,51 @@ const endInput = document.getElementById('endDate');
 setupDateInputs(startInput, endInput);
 const button = document.querySelector('.filters button');
 const gallery = document.getElementById('gallery');
+const modal = document.getElementById('imageModal');
+const modalBody = document.querySelector('.modal-body');
+const modalCloseButton = document.querySelector('.modal-close');
 
 const apiUrl = 'https://science.nasa.gov/wp-json/wp/v2/apod-basic';
 const imageLimit = 9;
 const maxLookbackDays = 30;
+
+modalCloseButton.addEventListener('click', closeModal);
+modal.addEventListener('click', (event) => {
+  if (event.target === modal) {
+    closeModal();
+  }
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && !modal.classList.contains('hidden')) {
+    closeModal();
+  }
+});
+
+function openModal(imageData) {
+  modalBody.replaceChildren();
+
+  const image = document.createElement('img');
+  image.src = imageData.hdurl || imageData.url;
+  image.alt = imageData.alt || imageData.title;
+  modalBody.appendChild(image);
+
+  const title = document.createElement('h2');
+  title.textContent = imageData.title;
+  modalBody.appendChild(title);
+
+  const description = document.createElement('p');
+  addExplanationContent(description, imageData.explanation || 'No description available.');
+  modalBody.appendChild(description);
+
+  modal.classList.remove('hidden');
+  modal.setAttribute('aria-hidden', 'false');
+}
+
+function closeModal() {
+  modal.classList.add('hidden');
+  modal.setAttribute('aria-hidden', 'true');
+}
 
 button.addEventListener('click', async () => {
   const startDate = startInput.value;
@@ -96,12 +137,12 @@ function displayImages(images) {
   gallery.replaceChildren();
 
   images.forEach((imageData) => {
-    const item = document.createElement('div');
+    const item = document.createElement('article');
     item.className = 'gallery-item';
 
     if (imageData.media_type === 'image') {
       const image = document.createElement('img');
-      image.src = imageData.hdurl;
+      image.src = imageData.hdurl || imageData.url;
       image.alt = imageData.alt || imageData.title;
       item.appendChild(image);
     } else {
@@ -112,12 +153,16 @@ function displayImages(images) {
     }
 
     const title = document.createElement('p');
+    title.className = 'gallery-item-title';
     title.textContent = imageData.title;
     item.appendChild(title);
 
-    const description = document.createElement('p');
-    addExplanationContent(description, imageData.explanation);
-    item.appendChild(description);
+    const detailsButton = document.createElement('button');
+    detailsButton.className = 'details-button';
+    detailsButton.type = 'button';
+    detailsButton.textContent = 'Details';
+    detailsButton.addEventListener('click', () => openModal(imageData));
+    item.appendChild(detailsButton);
 
     gallery.appendChild(item);
   });
