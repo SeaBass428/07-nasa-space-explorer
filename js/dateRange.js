@@ -22,6 +22,11 @@ function setupDateInputs(startInput, endInput) {
 
   // Automatically adjust end date to show exactly 9 days of images
   startInput.addEventListener('change', () => {
+    if (!startInput.value) {
+      endInput.value = '';
+      return;
+    }
+
     const startDate = new Date(startInput.value);
     const endDate = new Date(startDate);
     endDate.setDate(startDate.getDate() + 8);
