@@ -10,8 +10,7 @@ setupDateInputs(startInput, endInput);
 const button = document.querySelector('.filters button');
 const gallery = document.getElementById('gallery');
 
-const apiKey = 'tjjKCCwmdtjRDCFngjhtWcj9zRbzghBGKBqgJj7L';
-const apiUrl = 'https://api.nasa.gov/planetary/apod';
+const apiUrl = 'https://science.nasa.gov/wp-json/wp/v2/apod-basic';
 
 button.addEventListener('click', async () => {
   const startDate = startInput.value;
@@ -23,24 +22,39 @@ button.addEventListener('click', async () => {
   }
 
   const parameters = new URLSearchParams({
-    start_date: startDate,
-    end_date: endDate,
-    api_key: apiKey
+    date_from: startDate.slice(2).replaceAll('-', ''),
+    date_to: endDate.slice(2).replaceAll('-', ''),
+    per_page: '100'
   });
 
   gallery.textContent = 'Loading images...';
 
   try {
-    const response = await fetch(`${apiUrl}?${parameters}`);
-    const images = await response.json();
+    const images = [];
+    let page = 1;
 
-    if (!response.ok) {
-      const message = images.error?.message || `NASA could not return images (${response.status}).`;
-      throw new Error(message);
-    }
+    while (true) {
+      parameters.set('page', String(page));
+      const response = await fetch(`${apiUrl}?${parameters}`);
+      const pageImages = await response.json();
 
-    if (!Array.isArray(images)) {
-      throw new Error('NASA returned an unexpected response. Please try again.');
+      if (!response.ok) {
+        const message = pageImages.message || `NASA could not return images (${response.status}).`;
+        throw new Error(message);
+      }
+
+      if (!Array.isArray(pageImages)) {
+        throw new Error('NASA returned an unexpected response. Please try again.');
+      }
+
+      images.push(...pageImages);
+
+      const totalPages = Number(response.headers.get('X-WP-TotalPages'));
+      if (pageImages.length < 100 || (totalPages > 0 && page >= totalPages)) {
+        break;
+      }
+
+      page += 1;
     }
 
     if (images.length === 0) {
@@ -65,8 +79,8 @@ function displayImages(images) {
 
     if (imageData.media_type === 'image') {
       const image = document.createElement('img');
-      image.src = imageData.url;
-      image.alt = imageData.title;
+      image.src = imageData.hdurl;
+      image.alt = imageData.alt || imageData.title;
       item.appendChild(image);
     } else {
       const link = document.createElement('a');
@@ -80,9 +94,62 @@ function displayImages(images) {
     item.appendChild(title);
 
     const description = document.createElement('p');
-    description.textContent = imageData.explanation;
+    addExplanationContent(description, imageData.explanation);
     item.appendChild(description);
 
     gallery.appendChild(item);
   });
+}
+
+function addExplanationContent(description, explanation) {
+  const parsedExplanation = new DOMParser().parseFromString(explanation, 'text/html');
+  // Rebuild the explanation with only safe formatting and HTTPS links.
+  const safeTags = new Set(['a', 'br', 'em', 'strong']);
+  const blockedTags = new Set(['iframe', 'object', 'script', 'style']);
+
+  function copySafeContent(source, destination) {
+    source.childNodes.forEach((node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        destination.appendChild(document.createTextNode(node.textContent));
+        return;
+      }
+
+      if (node.nodeType !== Node.ELEMENT_NODE) {
+        return;
+      }
+
+      const tagName = node.tagName.toLowerCase();
+      if (blockedTags.has(tagName)) {
+        return;
+      }
+
+      if (!safeTags.has(tagName)) {
+        copySafeContent(node, destination);
+        return;
+      }
+
+      const safeElement = document.createElement(tagName);
+      if (tagName === 'a') {
+        const href = node.getAttribute('href');
+        if (href && /^https:\/\//i.test(href)) {
+          const linkUrl = document.createElement('a');
+          linkUrl.href = href;
+          if (linkUrl.protocol === 'https:' && linkUrl.hostname) {
+            safeElement.href = linkUrl.href;
+            safeElement.target = '_blank';
+            safeElement.rel = 'noopener noreferrer';
+          }
+        }
+      }
+
+      copySafeContent(node, safeElement);
+      if (tagName !== 'a' || safeElement.href) {
+        destination.appendChild(safeElement);
+      } else {
+        copySafeContent(node, destination);
+      }
+    });
+  }
+
+  copySafeContent(parsedExplanation.body, description);
 }
