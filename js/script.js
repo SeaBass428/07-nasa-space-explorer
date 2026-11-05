@@ -12,10 +12,20 @@ const gallery = document.getElementById('gallery');
 const modal = document.getElementById('imageModal');
 const modalBody = document.querySelector('.modal-body');
 const modalCloseButton = document.querySelector('.modal-close');
+const spaceFactText = document.getElementById('spaceFactText');
 
 const apiUrl = 'https://science.nasa.gov/wp-json/wp/v2/apod-basic';
 const imageLimit = 9;
 const maxLookbackDays = 30;
+const spaceFacts = [
+  'Sunlight takes about 8 minutes and 20 seconds to reach Earth.',
+  'A day on Venus is longer than its year: Venus takes about 243 Earth days to rotate once, but about 225 Earth days to orbit the Sun.',
+  'Jupiter is the largest planet in our solar system.',
+  'The Moon is slowly moving away from Earth by about 3.8 centimeters each year.',
+  'Olympus Mons on Mars is the largest known volcano in the solar system.'
+];
+
+showRandomSpaceFact();
 
 modalCloseButton.addEventListener('click', closeModal);
 modal.addEventListener('click', (event) => {
@@ -30,13 +40,15 @@ document.addEventListener('keydown', (event) => {
   }
 });
 
+function showRandomSpaceFact() {
+  // Choose one of the stored facts each time the page loads.
+  const randomIndex = Math.floor(Math.random() * spaceFacts.length);
+  spaceFactText.textContent = spaceFacts[randomIndex];
+}
+
 function openModal(imageData) {
   modalBody.replaceChildren();
-
-  const image = document.createElement('img');
-  image.src = imageData.hdurl || imageData.url;
-  image.alt = imageData.alt || imageData.title;
-  modalBody.appendChild(image);
+  modalBody.appendChild(createMediaPreview(imageData));
 
   const title = document.createElement('h2');
   title.textContent = imageData.title;
@@ -48,6 +60,94 @@ function openModal(imageData) {
 
   modal.classList.remove('hidden');
   modal.setAttribute('aria-hidden', 'false');
+}
+
+function createMediaPreview(mediaData) {
+  const preview = document.createElement('img');
+  preview.className = 'media-preview';
+  preview.alt = mediaData.alt || mediaData.title;
+
+  if (mediaData.media_type === 'image') {
+    preview.src = mediaData.hdurl || mediaData.url;
+    return preview;
+  }
+
+  if (mediaData.media_type === 'video') {
+    const videoUrl = new URL(mediaData.url);
+    const embedUrl = getVideoEmbedUrl(videoUrl);
+
+    if (embedUrl) {
+      const iframe = document.createElement('iframe');
+      iframe.className = 'media-preview';
+      iframe.src = embedUrl;
+      iframe.title = `Video: ${mediaData.title}`;
+      iframe.allow = 'fullscreen; picture-in-picture';
+      iframe.allowFullscreen = true;
+      iframe.loading = 'lazy';
+      return iframe;
+    }
+
+    if (/\.(mp4|webm|ogg)$/i.test(videoUrl.pathname)) {
+      const video = document.createElement('video');
+      video.className = 'media-preview';
+      video.src = videoUrl.href;
+      video.controls = true;
+      video.preload = 'metadata';
+      video.playsInline = true;
+      return video;
+    }
+
+    if (mediaData.thumbnail_url) {
+      preview.src = mediaData.thumbnail_url;
+      const link = document.createElement('a');
+      link.href = videoUrl.href;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.setAttribute('aria-label', `Watch video: ${mediaData.title}`);
+      link.appendChild(preview);
+      return link;
+    }
+
+    const link = document.createElement('a');
+    link.href = videoUrl.href;
+    link.textContent = 'Watch this APOD video';
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    return link;
+  }
+
+  const link = document.createElement('a');
+  link.href = mediaData.url;
+  link.textContent = 'View APOD media';
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  return link;
+}
+
+function getVideoEmbedUrl(videoUrl) {
+  if (videoUrl.protocol !== 'https:') {
+    return null;
+  }
+
+  const host = videoUrl.hostname.toLowerCase();
+  if (['youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtube-nocookie.com', 'www.youtube-nocookie.com', 'youtu.be'].includes(host)) {
+    const videoId = host === 'youtu.be'
+      ? videoUrl.pathname.slice(1)
+      : videoUrl.searchParams.get('v') || videoUrl.pathname.split('/').filter(Boolean).pop();
+
+    return videoId && /^[\w-]+$/.test(videoId)
+      ? `https://www.youtube-nocookie.com/embed/${videoId}`
+      : null;
+  }
+
+  if (['vimeo.com', 'www.vimeo.com', 'player.vimeo.com'].includes(host)) {
+    const videoId = videoUrl.pathname.split('/').filter(Boolean).pop();
+    return videoId && /^\d+$/.test(videoId)
+      ? `https://player.vimeo.com/video/${videoId}`
+      : null;
+  }
+
+  return null;
 }
 
 function closeModal() {
@@ -139,18 +239,7 @@ function displayImages(images) {
   images.forEach((imageData) => {
     const item = document.createElement('article');
     item.className = 'gallery-item';
-
-    if (imageData.media_type === 'image') {
-      const image = document.createElement('img');
-      image.src = imageData.hdurl || imageData.url;
-      image.alt = imageData.alt || imageData.title;
-      item.appendChild(image);
-    } else {
-      const link = document.createElement('a');
-      link.href = imageData.url;
-      link.textContent = 'View APOD media';
-      item.appendChild(link);
-    }
+    item.appendChild(createMediaPreview(imageData));
 
     const title = document.createElement('p');
     title.className = 'gallery-item-title';

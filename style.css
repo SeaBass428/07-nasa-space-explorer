@@ -132,6 +132,29 @@ body {
   background: #df3018;
 }
 
+.space-fact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-top: 20px;
+  padding: 22px 26px;
+  border: 1px solid rgba(145, 186, 255, 0.3);
+  border-radius: 9px;
+  background: linear-gradient(110deg, rgba(11, 61, 145, 0.4), rgba(16, 35, 63, 0.9));
+}
+
+.space-fact h2 {
+  margin-top: 6px;
+  font: 600 1.2rem Inter, Arial, sans-serif;
+}
+
+.space-fact div > p:last-child {
+  margin-top: 8px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
 .filters input:focus-visible,
 button:focus-visible,
 a:focus-visible {
@@ -164,11 +187,23 @@ a:focus-visible {
   border-color: rgba(145, 186, 255, 0.65);
 }
 
-.gallery-item img {
+.gallery-item .media-preview {
   width: 100%;
   height: 210px;
   border-radius: 5px;
+}
+
+.gallery-item img,
+.gallery-item video {
   object-fit: cover;
+}
+
+.gallery-item img {
+  transition: transform 0.3s ease;
+}
+
+.gallery-item img:hover {
+  transform: scale(1.05);
 }
 
 .gallery-item p {
@@ -290,10 +325,15 @@ a:focus-visible {
   gap: 16px;
 }
 
-.modal-body img {
+.modal-body .media-preview {
   width: 100%;
+  aspect-ratio: 16 / 9;
   max-height: 500px;
   border-radius: 6px;
+}
+
+.modal-body img,
+.modal-body video {
   object-fit: cover;
 }
 
@@ -331,6 +371,12 @@ a:focus-visible {
 
   .filters button {
     min-height: 48px;
+  }
+
+  .space-fact {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 20px;
   }
 
   .gallery {
